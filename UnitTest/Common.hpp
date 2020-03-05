@@ -1,0 +1,160 @@
+#pragma once
+#include "MathLib.hpp"
+
+#if !defined(_MSC_VER) && !defined(__STDC_LIB_EXT1__)  
+#define sprintf_s sprintf
+#define strcpy_s strcpy
+#endif
+
+// Component Index Table Type, the values you can specify:
+// 0: use sequential array, the search speed is log(n), n is the number of components that the current entity has
+// 1: use hashmap as a container, with the same search speed as std::unordered_map
+// 2: use direct array, the search speed is log(1), but remember to give the component and unique id using DefineComponentWithID
+//	  instead of DefineComponent when you define your own component, and make sure this id doesn't excceed
+//    TINYECS_MAX_COMPONENT_COUNT whose default value is 128.
+#define TINYECS_COMPONENT_INDEX_TABLE_TYPE 2
+
+// if TINYECS_COMPONENT_INDEX_TABLE_TYPE is set to 2, then enable TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID
+#if TINYECS_COMPONENT_INDEX_TABLE_TYPE == 2
+#define TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID 1
+#endif
+// 
+
+// Maximum count of entities in each chunk is (1 << TINYECS_MAX_BLOCK_COUNT_BITS)
+#define TINYECS_MAX_BLOCK_COUNT_BITS 10
+
+#include "../TinyECS.hpp"
+
+using namespace TinyECS;
+
+// If you want to use direct array as component table for better performance
+// you ought to use DefineComponentWithID  instead of DefineComponent and give it an unique id.
+
+#if TINYECS_COMPONENT_INDEX_TABLE_TYPE != 2
+DefineComponent(Profile)
+{
+	char	name[128] = { 0 };
+	int		age = 0;
+
+	Profile(){}
+	inline Profile(const char* name, int age);
+	inline bool operator==(const Profile& other) const;
+	inline bool operator!=(const Profile& other) const;
+};
+
+DefineComponent(Transform)
+{
+	Vector3		position;
+	Vector3		scale;
+	float		yaw = 0;
+
+	Transform(){}
+	inline Transform(const Vector3& p, const Vector3& scale, float yaw);
+	inline bool operator==(const Transform& other) const;
+	inline bool operator!=(const Transform& other) const;
+};
+
+DefineComponent(Velocity)
+{
+	Vector3		Direction;
+	float		Magnitude = 0.0f;
+
+	Velocity(){}
+	inline Velocity(const Vector3& dir, float mag);
+	inline bool operator==(const Velocity& other) const;
+	inline bool operator!=(const Velocity& other) const;
+};
+
+#else
+
+DefineComponentWithID(Profile, 1)
+{
+	char	name[128] = { 0 };
+	int		age = 0;
+
+	Profile() {}
+	inline Profile(const char* name, int age);
+	inline bool operator==(const Profile& other) const;
+	inline bool operator!=(const Profile& other) const;
+};
+
+DefineComponentWithID(Transform, 2)
+{
+	Vector3		position;
+	Vector3		scale;
+	float		yaw = 0;
+
+	Transform() {}
+	inline Transform(const Vector3& p, const Vector3& scale, float yaw);
+	inline bool operator==(const Transform& other) const;
+	inline bool operator!=(const Transform& other) const;
+};
+
+DefineComponentWithID(Velocity, 3)
+{
+	Vector3		Direction;
+	float		Magnitude = 0.0f;
+
+	Velocity() {}
+	inline Velocity(const Vector3& dir, float mag);
+	inline bool operator==(const Velocity& other) const;
+	inline bool operator!=(const Velocity& other) const;
+};
+#endif
+
+
+Profile::Profile(const char* name, int age)
+{
+	strcpy_s(this->name, name);
+	this->age = age;
+}
+
+bool Profile::operator==(const Profile& other) const
+{
+	return strcmp(name, other.name) == 0 && age == other.age;
+}
+
+bool Profile::operator!=(const Profile& other) const
+{
+	return !(*this == other);
+}
+
+Transform::Transform(const Vector3& p, const Vector3& scale, float yaw)
+	:position(p), scale(scale), yaw(yaw)
+{
+}
+
+bool Transform::operator==(const Transform& other) const
+{
+	return position == other.position
+		&& scale == other.scale
+		&& yaw == other.yaw;
+}
+
+bool Transform::operator!=(const Transform& other) const
+{
+	return !(*this == other);
+}
+
+Velocity::Velocity(const Vector3& dir, float mag)
+	:Direction(dir), Magnitude(mag)
+{
+}
+
+bool Velocity::operator==(const Velocity& other) const
+{
+	return Direction == other.Direction && Magnitude == other.Magnitude;
+}
+
+bool Velocity::operator!=(const Velocity& other) const
+{
+	return !(*this == other);
+}
+
+// define an entity class
+// an actor contains three components: Profile, Transform, Velocity.
+class ActorClass 
+	: public EntityClass<Profile, Transform, Velocity> {};
+
+
+
