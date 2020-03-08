@@ -321,6 +321,7 @@ MyDefinedEvent evt;
 pEventManager->TriggerEvent<MyDefinedEvent>(evt);
 ```
 There are two built-in events, which are triggered by the system automatically, you don't need to trigger manually:
+
 * **CreateEntityEvent**:  triggered when an entity is created.
 * **DeleteEntityEvent**:  triggered when an entity is destroyed.
 
