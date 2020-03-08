@@ -4,6 +4,7 @@ TinyECS is a lightweight C++ ECS (Entity-Component-System) Library, which can be
 
 ## Download & Install
 TinyECS is a header-only library. The easiest way to start is to download the project onto your local environment, and include the single header file, "TinyECS.hpp", in any project. Or you can use cmake to build the UnitTest demo given in the project. A C++ compiler supporting C++17 standard is a necessity, and the following compilers have already been tested:
+
 * MSVC 15 & 16  ( Visual Studio 2017 & 2019 )
 * GCC 8.2.0
 * Clang 8.0.0
