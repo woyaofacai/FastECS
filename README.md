@@ -203,7 +203,7 @@ pContext->ForEach<Profile>([&sum, &count](Entity* pEntity, Profile* pProfile) {
 });
 float average_age = (float)sum / count;
 ```
-Here, I give a *Profile* as its template parameter, meaning we only care about those entities at least with a 'Profile' component. The argument is a function given as a lambda expression, whose prototype must be paid attention to: the first parameter must be *Entity**, and the rest ones must correspond to the template parameters, here is *Profile**, of course.
+Here, I give a *Profile* as its template parameter, meaning we only care about those entities at least with a 'Profile' component. The argument is a function given as a lambda expression, whose prototype must be paid attention to: the first parameter must be an Entity pointer, and the rest ones must correspond to the template parameters, here is Profile, of course.
 
 Multiple comonent types are also allowed to appear in the template parameters:
 ```C++
