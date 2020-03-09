@@ -434,6 +434,7 @@ inline void AdvancePointers(T0*& p0, T1*& p1, T2*& p2, T3*& p3, T4*& p4, T5*& p5
 	T0* p0 = (T0*)pBytes[0]; T1* p1 = (T1*)pBytes[1]; T2* p2 = (T2*)pBytes[2]; T3* p3 = (T3*)pBytes[3]; T4* p4 = (T4*)pBytes[4]; \
 	T5* p5 = (T5*)pBytes[5]; T6* p6 = (T6*)pBytes[6]; T7* p7 = (T7*)pBytes[7]; T8* p8 = (T8*)pBytes[8]; T9* p9 = (T9*)pBytes[9]; 
 
+
 #define FOR_EACH_ENTITY(f, count, pEntity, ...)			\
 	for (int __i = 0; __i < count; __i++) {				\
 		if (pEntity->mValid)							\
@@ -1397,7 +1398,7 @@ public:
 	void _DoForEach(F&& f, int count, Entity* pEntity, byte* componentsBytes[])
 	{
 		CAST_COMPONENTS_5(componentsBytes, T0, T1, T2, T3, T4, p0, p1, p2, p3, p4);
-		FOR_EACH_ENTITY(pArg, f, count, pEntity, p0, p1, p2, p3, p4);
+		FOR_EACH_ENTITY(f, count, pEntity, p0, p1, p2, p3, p4);
 	}
 
 	template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename F>
