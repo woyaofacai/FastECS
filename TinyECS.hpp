@@ -79,6 +79,12 @@ typedef unsigned char byte;
 #define TINYECS_SAFE_DELETE(x) { if(x){ delete x; x = 0; } }
 #endif
 
+#if TINYECS_ASSERT_ENABLE
+#define TINYECS_ASSERT(expression) assert(expression)
+#else
+#define TINYECS_ASSERT(expression)
+#endif
+
 /// The maximum thread can be designated when using ParallelJob
 #ifdef TINYECS_MAX_THREAD_COUNT
 enum { MAX_THREAD_COUNT = TINYECS_MAX_THREAD_COUNT };
@@ -479,6 +485,25 @@ public:
 	}
 };
 
+/// get next address that is aligned according to 'alignment' parameter
+inline void* get_next_aligned_address(const void* ptr, size_t alignment)
+{
+	return (void*)(((uintptr_t)ptr + (uintptr_t)(alignment - 1)) / (uintptr_t)alignment * (uintptr_t)alignment);
+}
+
+/// check if pointer's address is aligned according to the 'alignment' parameter
+inline bool check_aligned_address(const void* ptr, size_t alignment)
+{
+	return (uintptr_t)ptr % (uintptr_t)alignment == 0;
+}
+
+/// check if pointer's address is aligned with respect to the type 'T'
+template<typename T>
+inline bool check_aligned_address(const T* ptr)
+{
+	return (uintptr_t)ptr % (uintptr_t)std::alignment_of_v<T> == 0;
+}
+
 struct DummyEntityClass {};
 
 struct EntityClassBase {};
@@ -524,6 +549,7 @@ struct ComponentMeta
 	ComponentHash			hashCode;
 	ComponentTypeID			typeId;
 	size_t					size;			/// the component size, which means sizeof(C)
+	size_t					alignment;		/// the component's alignment, calculated by std::alignment
 	ComponentConstructor	constructor = nullptr; /// constructor of component class, which means C();
 	ComponentDestructor		destructor = nullptr; /// destructor of component class, which means ~C();
 	ComponentAssignment		assignment = nullptr; /// assignment operator, which means operator==(); 
@@ -568,8 +594,8 @@ class HashMapComponentIndexTable
 public:
 	int Add(ComponentTypeID id)
 	{
-		assert(mIndexMap.size() == mComponentCount);
-		assert(mIndexMap.find(id) == mIndexMap.end());
+		TINYECS_ASSERT(mIndexMap.size() == mComponentCount);
+		TINYECS_ASSERT(mIndexMap.find(id) == mIndexMap.end());
 		auto count = mComponentCount;
 		mIndexMap.insert({ id, mComponentCount });
 		mComponentCount += 1;
@@ -604,7 +630,7 @@ public:
 	}
 	int Add(ComponentTypeID id)
 	{
-		assert(mIndexTable[id] == INVALID_COMPONENT_INDEX);
+		TINYECS_ASSERT(mIndexTable[id] == INVALID_COMPONENT_INDEX);
 		mIndexTable[id] = mComponentCount;
 		auto count = mComponentCount;
 		mComponentCount += 1;
@@ -686,6 +712,7 @@ public:
 			mComponentHashes[i] = meta->hashCode;
 			mComponentTypeIds[i] = meta->typeId;
 			mComponentSizes[i] = meta->size;
+			mComponentAlignments[i] = meta->alignment;
 			mComponentOffsets[i] = currentOffset;
 
 			mComponentConstructors[i] = &meta->constructor;
@@ -751,6 +778,7 @@ private:
 	ComponentTypeID		mComponentHashes[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	ComponentHash		mComponentTypeIds[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	size_t				mComponentSizes[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
+	size_t				mComponentAlignments[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	size_t				mComponentOffsets[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	ComponentConstructor*	mComponentConstructors[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	ComponentDestructor*	mComponentDestructors[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
@@ -854,6 +882,7 @@ public:
 		meta->hashCode = ComponentType::hash_code();
 		meta->typeId = ComponentType::type_id();;
 		meta->size = sizeof(ComponentType);
+		meta->alignment = std::alignment_of<ComponentType>::value;
 		meta->constructor = [](void* pMem) {
 			new (pMem) ComponentType();
 		};
@@ -1167,21 +1196,31 @@ class EntityComponentChunk
 public:
 	EntityComponentChunk(uint16_t chunkId, EntityComponentStorage* pStorage, 
 		EntityArchetype* pArchetype,
-		size_t n, size_t blockSize)
+		size_t n, size_t chunkSize)
 		: mChunkId(chunkId)
 		, mEntityComponentStorage(pStorage)
 		, mArchetype(pArchetype)
 		, mBlockCount((uint16_t)n)
-		, mBlockSize(blockSize)
+		, mChunkSize(chunkSize)
 		, mComponentCount((int)pArchetype->mComponentCount)
 		, mUsedCount(0)
 	{
 		//mMem = (byte*)malloc(mBlockCount * mBlockSize);
-		void* pMem = GetMemoryAllocator()->Malloc(mBlockCount * mBlockSize);
+		void* pMem = GetMemoryAllocator()->Malloc(mChunkSize);
 
 		mFreeList = reinterpret_cast<uint16_t*>(pMem);
-		mEntitiesBuffer = reinterpret_cast<Entity*>(mFreeList + mBlockCount);
-		mComponentsBuffer = reinterpret_cast<byte*>(mEntitiesBuffer + mBlockCount);
+		//mEntitiesBuffer = reinterpret_cast<Entity*>(mFreeList + mBlockCount);
+		void* pEntityBufferAddress = get_next_aligned_address(mFreeList + mBlockCount, std::alignment_of_v<Entity>);
+		mEntitiesBuffer = reinterpret_cast<Entity*>(pEntityBufferAddress);
+
+		//mComponentsBuffer = reinterpret_cast<byte*>(mEntitiesBuffer + mBlockCount);
+		byte* pComponentBufferAddress = (byte*)(mEntitiesBuffer + mBlockCount);
+		for (int i = 0; i < mComponentCount; i++) {
+			size_t componentAlignment = pArchetype->mComponentAlignments[i];
+			size_t componentSize = pArchetype->mComponentSizes[i];
+			mComponentBuffers[i] = (byte*)get_next_aligned_address(pComponentBufferAddress, componentAlignment);
+			pComponentBufferAddress = mComponentBuffers[i] + mBlockCount * componentSize;
+		}
 
 		// init free list
 		for (uint16_t i = 0; i < mBlockCount; i++) {
@@ -1204,13 +1243,13 @@ public:
 
 	Entity* Allocate(bool bCallConstruct)
 	{
-		assert(mFreeHead != mFreeTail);
+		TINYECS_ASSERT(mFreeHead != mFreeTail);
 		uint16_t head = mFreeHead;
 		mFreeHead = mFreeList[head];
 		Entity* pEntity = &mEntitiesBuffer[head];
 		pEntity->mValid = true;
 		pEntity->mGenID = (pEntity->mGenID + 1) & 0x0000FFFF; // mGenID just has 16 bits
-		assert(pEntity->mBlockIndex == head);
+		TINYECS_ASSERT(pEntity->mBlockIndex == head);
 		// construct components
 		if (bCallConstruct)
 			ConstructComponents(pEntity);
@@ -1232,7 +1271,7 @@ public:
 	// bCallDestructor: if need to call its components' destructors
 	void Deallocate(Entity* pEntity, bool bCallDestructor)
 	{
-		assert(pEntity->mChunkIndex == mChunkId);
+		TINYECS_ASSERT(pEntity->mChunkIndex == mChunkId);
 		if (bCallDestructor)
 			DestructComponents(pEntity);
 		mFreeList[pEntity->mBlockIndex] = mFreeHead;
@@ -1282,9 +1321,10 @@ public:
 		int index = mArchetype->GetComponentIndex<ComponentType>();
 		if (index == INVALID_COMPONENT_INDEX)
 			return nullptr;
-		size_t offset = mArchetype->mComponentOffsets[index];
 		size_t size = mArchetype->mComponentSizes[index];
-		return reinterpret_cast<ComponentType*>(mComponentsBuffer + (offset * mBlockCount) + (size * pEntity->mBlockIndex));
+		auto pComponent = reinterpret_cast<ComponentType*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
+		TINYECS_ASSERT(check_aligned_address(pComponent));
+		return pComponent;
 	}
 
 	template<typename ComponentType>
@@ -1293,27 +1333,30 @@ public:
 		int index = mArchetype->GetComponentIndex<ComponentType>();
 		if (index == INVALID_COMPONENT_INDEX)
 			return nullptr;
-		size_t offset = mArchetype->mComponentOffsets[index];
 		size_t size = mArchetype->mComponentSizes[index];
-		return reinterpret_cast<const ComponentType*>(mComponentsBuffer + (offset * mBlockCount) + (size * pEntity->mBlockIndex));
+		auto pComponent = reinterpret_cast<const ComponentType*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
+		TINYECS_ASSERT(check_aligned_address(pComponent));
+		return pComponent;
 	}
 
 	template<typename T = byte>
 	T* GetComponentByIndex(Entity* pEntity, int index)
 	{
-		assert(index < mComponentCount);
-		size_t offset = mArchetype->mComponentOffsets[index];
+		TINYECS_ASSERT(index < mComponentCount);
 		size_t size = mArchetype->mComponentSizes[index];
-		return reinterpret_cast<T*>(mComponentsBuffer + (offset * mBlockCount) + (size * pEntity->mBlockIndex));
+		T* pComponent = reinterpret_cast<T*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
+		TINYECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
+		return pComponent;
 	}
 
 	template<typename T = byte>
 	const T* GetComponentByIndex(const Entity* pEntity, int index) const
 	{
-		assert(index < mComponentCount);
-		size_t offset = mArchetype->mComponentOffsets[index];
+		TINYECS_ASSERT(index < mComponentCount);
 		size_t size = mArchetype->mComponentSizes[index];
-		return reinterpret_cast<const T*>(mComponentsBuffer + (offset * mBlockCount) + (size * pEntity->mBlockIndex));
+		const T* pComponent = reinterpret_cast<const T*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
+		TINYECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
+		return pComponent;
 	}
 
 	template<typename T = byte>
@@ -1563,9 +1606,10 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
+			//size_t offset = mArchetype->mComponentOffsets[index];
 			size_t componentSize = mArchetype->mComponentSizes[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			componentsBytes[i] = mComponentBuffers[index] + startBlockIndex * componentSize;
 		}
 
 		if constexpr (n <= 10)
@@ -1590,9 +1634,10 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
+			//size_t offset = mArchetype->mComponentOffsets[index];
 			size_t componentSize = mArchetype->mComponentSizes[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			componentsBytes[i] = mComponentBuffers[index] + startBlockIndex * componentSize;
 		}
 
 		if constexpr (n <= 10)
@@ -1615,8 +1660,9 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			//size_t offset = mArchetype->mComponentOffsets[index];
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			componentsBytes[i] = mComponentBuffers[index];
 		}
 
 		if constexpr (n <= 10)
@@ -1639,8 +1685,9 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			//size_t offset = mArchetype->mComponentOffsets[index];
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			componentsBytes[i] = mComponentBuffers[index];
 		}
 
 		if constexpr (n <= 10)
@@ -1663,8 +1710,9 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			//size_t offset = mArchetype->mComponentOffsets[index];
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			componentsBytes[i] = mComponentBuffers[index];
 		}
 
 		ComponentTuple componentTuple;
@@ -1684,8 +1732,9 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			//size_t offset = mArchetype->mComponentOffsets[index];
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset;
+			componentsBytes[i] = mComponentBuffers[index];
 		}
 
 		ComponentTuple componentTuple;
@@ -1708,9 +1757,10 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
+			//size_t offset = mArchetype->mComponentOffsets[index];
 			size_t componentSize = mArchetype->mComponentSizes[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			componentsBytes[i] = mComponentBuffers[index] + startBlockIndex * componentSize;
 		}
 
 		ComponentTuple componentTuple;
@@ -1732,9 +1782,10 @@ public:
 		byte* componentsBytes[n] = { 0 };
 		for (int i = 0; i < n; i++) {
 			int index = componentIndexes[i];
-			size_t offset = mArchetype->mComponentOffsets[index];
+			//size_t offset = mArchetype->mComponentOffsets[index];
 			size_t componentSize = mArchetype->mComponentSizes[index];
-			componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			//componentsBytes[i] = mComponentsBuffer + mBlockCount * offset + startBlockIndex * componentSize;
+			componentsBytes[i] = mComponentBuffers[index] + startBlockIndex * componentSize;
 		}
 
 		ComponentTuple componentTuple;
@@ -1763,7 +1814,7 @@ public:
 			GetMemoryAllocator()->Free(mFreeList);
 			mFreeList = nullptr;
 			mEntitiesBuffer = nullptr;
-			mComponentsBuffer = nullptr;
+			//mComponentsBuffer = nullptr;
 		}
 	}
 private:
@@ -1771,7 +1822,8 @@ private:
 	EntityComponentStorage*	mEntityComponentStorage;
 	EntityArchetype*	mArchetype;
 	uint16_t			mBlockCount;
-	size_t				mBlockSize;
+	//size_t				mBlockSize;
+	size_t				mChunkSize;
 	int					mComponentCount;
 	uint16_t			mUsedCount = 0;
 
@@ -1782,7 +1834,8 @@ private:
 	// Each element in freelist points to the next empty element's index
 	uint16_t*			mFreeList = nullptr;
 	Entity*				mEntitiesBuffer = nullptr;
-	byte*				mComponentsBuffer = nullptr;
+	//byte*				mComponentsBuffer = nullptr;
+	byte*				mComponentBuffers[MAX_COMPONENT_COUNT_PER_ENTITY] = { 0 };
 	//byte*				mMem = nullptr;
 };
 
@@ -1804,14 +1857,15 @@ public:
 		, mChunkArrayCapacity(16)
 	{
 		mComponentCountPerEntity = (int)pArchetype->mComponentCount;
-		mEntityBlockSize = EntityComponentChunk::CalculateBlockSize(pArchetype);
+		size_t entityBlockSize = EntityComponentChunk::CalculateBlockSize(pArchetype);
 
 		mChunkSize = MAX_STORAGE_CHUNK_SIZE;
-		mEntityCountPerChunk = mChunkSize / mEntityBlockSize;
+		mEntityCountPerChunk = mChunkSize / entityBlockSize - 1;
 		if (mEntityCountPerChunk > MAX_ENTITY_COUNT_PER_CHUNK)
 		{
 			mEntityCountPerChunk = MAX_ENTITY_COUNT_PER_CHUNK;
-			mChunkSize = MAX_ENTITY_COUNT_PER_CHUNK * mEntityBlockSize;
+			// allocate one extra block, for memory alignment
+			mChunkSize = (MAX_ENTITY_COUNT_PER_CHUNK + 1) * entityBlockSize;
 		}
 
 		//mChunkFreeList = (uint16_t*)malloc(sizeof(uint16_t) * mChunkArrayCapacity);
@@ -1837,7 +1891,7 @@ public:
 			}
 			EntityComponentChunk* pChunk = &mChunks[mChunkCount];
 			//pChunk->EntityComponentChunk::EntityComponentChunk(mChunkCount, this, mArchetype, mEntityCountPerChunk, mEntityBlockSize);
-			new (pChunk) EntityComponentChunk(mChunkCount, this, mArchetype, mEntityCountPerChunk, mEntityBlockSize);
+			new (pChunk) EntityComponentChunk(mChunkCount, this, mArchetype, mEntityCountPerChunk, mChunkSize);
 			mChunkCount += 1;
 			mChunkFreeList[mChunkFreeHead] = mChunkCount;
 		}
@@ -1873,7 +1927,7 @@ public:
 
 	Entity* CloneEntity(const Entity* pEntity)
 	{
-		assert(mArchetype == pEntity->GetArchetype());
+		TINYECS_ASSERT(mArchetype == pEntity->GetArchetype());
 		Entity* pClonedEntity = Allocate(false);
 		for (int i = 0; i < mComponentCountPerEntity; i++)
 		{
@@ -2020,7 +2074,7 @@ private:
 	size_t						mEntityCountPerChunk;
 	int							mComponentCountPerEntity;
 	size_t						mChunkSize;
-	size_t						mEntityBlockSize;
+	//size_t						mEntityBlockSize;
 
 	// freeList indicates which chunk is free
 	uint16_t*					mChunkFreeList;
@@ -2304,7 +2358,7 @@ public:
 	
 	EntityComponentStorage* GetEntityComponentStorage(uint16_t index)
 	{
-		assert(index < mEntityComponentStorageList.size());
+		TINYECS_ASSERT(index < mEntityComponentStorageList.size());
 		return mEntityComponentStorageList[index];
 	}
 
@@ -2334,7 +2388,7 @@ public:
 		EntityComponentStorage* pStorage = pArchetype->mStoragesInContext[mContextId];
 		if (!pStorage) {
 			uint16_t index = (uint16_t)mEntityComponentStorageList.size();
-			assert(index < MAX_STORAGE_COUNT_PER_CONTEXT);
+			TINYECS_ASSERT(index < MAX_STORAGE_COUNT_PER_CONTEXT);
 			pStorage = new EntityComponentStorage(this, index, pArchetype);
 			mEntityComponentStorageList.push_back(pStorage);
 			pArchetype->mStoragesInContext[mContextId] = pStorage;
@@ -2532,8 +2586,8 @@ class ParallelJobBase
 public:
 	void Prepare(EntityContext* pContext, int threadCount)
 	{
-		assert(threadCount <= MAX_THREAD_COUNT);
-		assert(mState != ParallelJobState::Executing);
+		TINYECS_ASSERT(threadCount <= MAX_THREAD_COUNT);
+		TINYECS_ASSERT(mState != ParallelJobState::Executing);
 		mContext = pContext;
 		mThreadCount = threadCount;
 		mStartCounter.store(0);
@@ -2820,7 +2874,7 @@ private:
 
 void Entity::Release()
 {
-	assert(mValid);
+	TINYECS_ASSERT(mValid);
 	this->mStorage->mContext->OnEntityDeleted(this);
 	mStorage->Deallocate(this, true);
 }
@@ -2841,7 +2895,7 @@ public:
 	EntityContext* CreateContext()
 	{
 		auto id = FindAvaibableContextId();
-		assert(id != -1);
+		TINYECS_ASSERT(id != -1);
 		auto pContext = new EntityContext(id, this, mArchetypeManager);
 		mEntityContexts[id] = pContext;
 		return pContext;
@@ -3062,7 +3116,7 @@ EntityID Entity::GetEntityID() const
 
 	return ((uint64_t)mGenID << 48)
 		| ((uint64_t)mStorage->mContext->GetContextId() << 40)
-		| ((uint64_t)mStorage->GetIndex() << (MAX_CHUNK_COUNT_BITS + MAX_BLOCK_COUNT_BITS))
+		| ((uint64_t)mStorage->GetIndex() << ((int)MAX_CHUNK_COUNT_BITS + (int)MAX_BLOCK_COUNT_BITS))
 		| ((uint64_t)mChunkIndex << MAX_BLOCK_COUNT_BITS)
 		| (uint64_t)mBlockIndex;
 }
@@ -3085,7 +3139,7 @@ void Entity::ParseEntityID(EntityID eid, uint16_t* genid,
 
 	*genid = (uint16_t)((eid >> 48) & 0x0FFFF);
 	*contextId = (uint8_t)((eid >> 40) & 0x0FF);
-	*storageIndex = (uint16_t)((eid >> (MAX_CHUNK_COUNT_BITS + MAX_BLOCK_COUNT_BITS)) & STORAGE_INDEX_MASK);
+	*storageIndex = (uint16_t)((eid >> ((int)MAX_CHUNK_COUNT_BITS + (int)MAX_BLOCK_COUNT_BITS)) & STORAGE_INDEX_MASK);
 	*chunkIndex = (uint16_t)((eid >> MAX_BLOCK_COUNT_BITS) & CHUNK_INDEX_MASK);
 	*blockIndex = (uint16_t)(eid & BLOCK_INDEX_MASK);
 }
@@ -3170,7 +3224,7 @@ template<typename ThreadLocalArg, typename...ComponentTypes>
 void ParallelJob<true, ThreadLocalArg, ComponentTypes...>::Execute(ThreadLocalArg* pThreadLocalArg)
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	assert(threadIndex < base::mThreadCount);
+	TINYECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3187,7 +3241,7 @@ template<typename...ComponentTypes>
 void ParallelJob<false, ComponentTypes...>::Execute()
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	assert(threadIndex < base::mThreadCount);
+	TINYECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3204,7 +3258,7 @@ template<typename ThreadLocalArg, typename...ComponentTypes>
 void ParallelBatchJob<true, ThreadLocalArg, ComponentTypes...>::Execute(ThreadLocalArg* pThreadLocalArg)
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	assert(threadIndex < base::mThreadCount);
+	TINYECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3221,7 +3275,7 @@ template<typename...ComponentTypes>
 void ParallelBatchJob<false, ComponentTypes...>::Execute()
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	assert(threadIndex < base::mThreadCount);
+	TINYECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
