@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------------------------
-TinyECS (Tiny Entity-Component-System Library)
+FastECS (Fast Entity-Component-System Library)
 ---------------------------------------------------------------------------
 
 Original code by edisongao
@@ -21,10 +21,10 @@ conditions are met:
   following disclaimer in the documentation and/or other
   materials provided with the distribution.
 
-* Neither the name of the assimp team, nor the names of its
+* Neither the name of the FastECS team, nor the names of its
   contributors may be used to endorse or promote products
   derived from this software without specific prior
-  written permission of the assimp team.
+  written permission of the FastECS team.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -53,29 +53,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 1: use hashmap as a container, with the same search speed as std::unordered_map
 // 2: use direct array, the search speed is log(1), but remember to give the component and unique id using DefineComponentWithID
 //	  instead of DefineComponent when you define your own component, and make sure this id doesn't excceed
-//    TINYECS_MAX_COMPONENT_COUNT whose default value is 128.
-#define TINYECS_COMPONENT_INDEX_TABLE_TYPE 2
+//    FASTECS_MAX_COMPONENT_COUNT whose default value is 128.
+#define FASTECS_COMPONENT_INDEX_TABLE_TYPE 2
 
-// if TINYECS_COMPONENT_INDEX_TABLE_TYPE is set to 2, then enable TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID
-#if TINYECS_COMPONENT_INDEX_TABLE_TYPE == 2
-#define TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID 1
+// if FASTECS_COMPONENT_INDEX_TABLE_TYPE is set to 2, then enable FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID
+#if FASTECS_COMPONENT_INDEX_TABLE_TYPE == 2
+#define FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID 1
 #endif
 // 
 
-// Maximum count of entities in each chunk is (1 << TINYECS_MAX_BLOCK_COUNT_BITS)
-#define TINYECS_MAX_BLOCK_COUNT_BITS 10
+// Maximum count of entities in each chunk is (1 << FASTECS_MAX_BLOCK_COUNT_BITS)
+#define FASTECS_MAX_BLOCK_COUNT_BITS 10
 
 // Enable dynamic assert in Debug mode 
-#define TINYECS_ASSERT_ENABLE 1
+#define FASTECS_ASSERT_ENABLE 1
 
-#include "../TinyECS.hpp"
+#include "../FastECS.hpp"
 
-using namespace TinyECS;
+using namespace FastECS;
 
 // If you want to use direct array as component table for better performance
 // you ought to use DefineComponentWithID  instead of DefineComponent and give it an unique id.
 
-#if TINYECS_COMPONENT_INDEX_TABLE_TYPE != 2
+#if FASTECS_COMPONENT_INDEX_TABLE_TYPE != 2
 DefineComponent(Profile)
 {
 	char	name[128] = { 0 };
@@ -148,7 +148,7 @@ DefineComponentWithID(Velocity, 3)
 
 // comment out the following code to replace the above definination
 // for memory alignment testing
-//struct alignas(64) Velocity : public TinyECS::component_name_class<3, TINYECS_STR("Velocity")>
+//struct alignas(64) Velocity : public FastECS::component_name_class<3, FASTECS_STR("Velocity")>
 //{
 //	Vector3		Direction;
 //	float		Magnitude = 0.0f;

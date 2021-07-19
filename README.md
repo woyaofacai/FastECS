@@ -1,16 +1,16 @@
- TinyECS
+ FastECS
 =================
-TinyECS is a lightweight C++ ECS (Entity-Component-System) Library, which can be used in game programming, game engine design or any other C++ software compiled with the standard of C++17.
+FastECS is a lightweight C++ ECS (Entity-Component-System) Library, which can be used in game programming, game engine design or any other C++ software compiled with the standard of C++17.
 
 ## Download & Install
-TinyECS is a header-only library. The easiest way to start is to download the project onto your local environment, and include the single header file, "TinyECS.hpp", in any project. Or you can use cmake to build the UnitTest demo given in the project. A 64bit C++ compiler supporting C++17 standard is a necessity, and the following compilers have already been tested:
+FastECS is a header-only library. The easiest way to start is to download the project onto your local environment, and include the single header file, "FastECS.hpp", in any project. Or you can use cmake to build the UnitTest demo given in the project. A 64bit C++ compiler supporting C++17 standard is a necessity, and the following compilers have already been tested:
 
 * MSVC 15 & 16  ( Visual Studio 2017 & 2019 )
 * GCC 8.2.0
 * Clang 8.0.0
 
 ## Tutorial
-Although TinyECS is tiny, it still supports the most essential and fundamental operations with good performance and high efficiency.
+Although FastECS is tiny, it still supports the most essential and fundamental operations with good performance and high efficiency.
 
 ### World & EntityContext
 These two concepts lay the foundations of the whole system. Any software system should only have one **World** object, but is permitted to create multiple **EntityContexts** at the same time. This gives developers a tool to differentiate entities by seperating them into different contexts. For example, your entire software may have several subsystems, in this situation, you can create one EntityContext for each subsystem; thus, entities in different subsystems are managed by their own contexts.
@@ -30,7 +30,7 @@ EntityContext* pContext = pWorld->CreateContext();
 ```
 
 ### Define Components
-A componet in TinyECS is just a plain C++ struct, without any extra size being added. There are two ways to create a component, one is use *DefineComponent* macro:
+A componet in FastECS is just a plain C++ struct, without any extra size being added. There are two ways to create a component, one is use *DefineComponent* macro:
 ```C++
 DefineComponent(Profile)
 {
@@ -51,9 +51,9 @@ DefineComponent(Velocity)
 	float		Magnitude = 0.0f;
 };
 ```
-Another approach is to give each component  an explicit identifier. When using this, you have to set the macro `TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID` to 1, which means you give a custumized id for each component:
+Another approach is to give each component  an explicit identifier. When using this, you have to set the macro `FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID` to 1, which means you give a custumized id for each component:
 ``` C++
-#define TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID 1
+#define FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID 1
 
 DefineComponentWithID(Profile, 1) // give it an integer as component id
 {
@@ -283,10 +283,10 @@ After creating a *ParallelJob*, now we can call **Prepare** before real executio
 
 Now, you can start to create threads, and call **Execute** on each thread. Remember to pass in the thread-local context object as its parameter.
 
-In TinyECS, there is another type of job called **ParallelBatchJob** which allows to run a ForEachBatch task on multiple threads. Its usage is very similar to ParallelJob.
+In FastECS, there is another type of job called **ParallelBatchJob** which allows to run a ForEachBatch task on multiple threads. Its usage is very similar to ParallelJob.
 
 ### Event
-TinyECS supports event system that allows us to subscribe any event you are interested in and write code in a observer pattern.
+FastECS supports event system that allows us to subscribe any event you are interested in and write code in a observer pattern.
 
 To use event, you first need an event manager, represented by **EventManager** class and created by **World::CreateEventManager** method.
 ```C++
@@ -326,7 +326,7 @@ There are two built-in events, which are triggered by the system automatically, 
 * **DeleteEntityEvent**:  triggered when an entity is destroyed.
 
 ### Customize Memory Allocator
-By default, TinyECS employs C standard functions, *malloc* and *free* , to allocate and release memory for entities and components. If you want to design your own memory management strategy and rewrite allocation algorithms, please consider defining a new memory-allocate class that implements **IChunkMemoryAllocator** interface. To use your customized one, call *SetChunkMemoryAllocator* and pass your own allocator pointer:
+By default, FastECS employs C standard functions, *malloc* and *free* , to allocate and release memory for entities and components. If you want to design your own memory management strategy and rewrite allocation algorithms, please consider defining a new memory-allocate class that implements **IChunkMemoryAllocator** interface. To use your customized one, call *SetChunkMemoryAllocator* and pass your own allocator pointer:
 
 ```C++
 class MyChunkMemoryAllocator : public IChunkMemoryAllocator

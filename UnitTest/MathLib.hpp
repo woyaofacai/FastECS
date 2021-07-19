@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------------------------
-TinyECS (Tiny Entity-Component-System Library)
+FastECS (Fast Entity-Component-System Library)
 ---------------------------------------------------------------------------
 
 Original code by edisongao
@@ -21,10 +21,10 @@ conditions are met:
   following disclaimer in the documentation and/or other
   materials provided with the distribution.
 
-* Neither the name of the assimp team, nor the names of its
+* Neither the name of the FastECS team, nor the names of its
   contributors may be used to endorse or promote products
   derived from this software without specific prior
-  written permission of the assimp team.
+  written permission of the FastECS team.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT

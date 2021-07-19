@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------------------------
-TinyECS (Tiny Entity-Component-System Library)
+FastECS (Fast Entity-Component-System Library)
 ---------------------------------------------------------------------------
 
 Original code by edisongao
@@ -21,10 +21,10 @@ conditions are met:
   following disclaimer in the documentation and/or other
   materials provided with the distribution.
 
-* Neither the name of the assimp team, nor the names of its
+* Neither the name of the FastECS team, nor the names of its
   contributors may be used to endorse or promote products
   derived from this software without specific prior
-  written permission of the assimp team.
+  written permission of the FastECS team.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -40,8 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---------------------------------------------------------------------------
 */
 
-#ifndef __DEFINED_TINYECS_HEADER_HPP__
-#define __DEFINED_TINYECS_HEADER_HPP__
+#ifndef __DEFINED_FASTECS_HEADER_HPP__
+#define __DEFINED_FASTECS_HEADER_HPP__
 
 #include <typeinfo>
 #include <map>
@@ -57,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <thread>
 #include <cstdlib>
 
-namespace TinyECS
+namespace FastECS
 {
 
 typedef unsigned char byte;
@@ -67,35 +67,35 @@ typedef unsigned char byte;
 	e.g. "abc" => 'a', 'b', 'c', '\0'
 	The length must be 32, extra bytes are filled with '\0'
 */
-#define TINYECS_STR_1(S,I) (I < sizeof(S) ? S[I] : '\0')
-#define TINYECS_STR_2(S,I) TINYECS_STR_1(S,I), TINYECS_STR_1(S,I+1)
-#define TINYECS_STR_4(S,I) TINYECS_STR_2(S,I), TINYECS_STR_2(S,I+2)
-#define TINYECS_STR_8(S,I) TINYECS_STR_4(S,I), TINYECS_STR_4(S,I+4)
-#define TINYECS_STR_16(S,I) TINYECS_STR_8(S,I), TINYECS_STR_8(S,I+8)
-#define TINYECS_STR_32(S,I) TINYECS_STR_16(S,I), TINYECS_STR_16(S,I+16)
-#define TINYECS_STR(S) TINYECS_STR_32(S,0)
+#define FASTECS_STR_1(S,I) (I < sizeof(S) ? S[I] : '\0')
+#define FASTECS_STR_2(S,I) FASTECS_STR_1(S,I), FASTECS_STR_1(S,I+1)
+#define FASTECS_STR_4(S,I) FASTECS_STR_2(S,I), FASTECS_STR_2(S,I+2)
+#define FASTECS_STR_8(S,I) FASTECS_STR_4(S,I), FASTECS_STR_4(S,I+4)
+#define FASTECS_STR_16(S,I) FASTECS_STR_8(S,I), FASTECS_STR_8(S,I+8)
+#define FASTECS_STR_32(S,I) FASTECS_STR_16(S,I), FASTECS_STR_16(S,I+16)
+#define FASTECS_STR(S) FASTECS_STR_32(S,0)
 
-#ifndef TINYECS_SAFE_DELETE
-#define TINYECS_SAFE_DELETE(x) { if(x){ delete x; x = 0; } }
+#ifndef FASTECS_SAFE_DELETE
+#define FASTECS_SAFE_DELETE(x) { if(x){ delete x; x = 0; } }
 #endif
 
-#if TINYECS_ASSERT_ENABLE
-#define TINYECS_ASSERT(expression) assert(expression)
+#if FASTECS_ASSERT_ENABLE
+#define FASTECS_ASSERT(expression) assert(expression)
 #else
-#define TINYECS_ASSERT(expression)
+#define FASTECS_ASSERT(expression)
 #endif
 
 /// The maximum thread can be designated when using ParallelJob
-#ifdef TINYECS_MAX_THREAD_COUNT
-enum { MAX_THREAD_COUNT = TINYECS_MAX_THREAD_COUNT };
+#ifdef FASTECS_MAX_THREAD_COUNT
+enum { MAX_THREAD_COUNT = FASTECS_MAX_THREAD_COUNT };
 #else
 enum { MAX_THREAD_COUNT = 32 };
 #endif
 
 /// The maximum component count for each entity
-#ifdef TINYECS_MAX_COMPONENT_COUNT_PER_ENTITY
-#define MAX_COMPONENT_COUNT_PER_ENTITY TINYECS_MAX_COMPONENT_COUNT_PER_ENTITY
-enum { MAX_COMPONENT_COUNT_PER_ENTITY = TINYECS_MAX_COMPONENT_COUNT_PER_ENTITY };
+#ifdef FASTECS_MAX_COMPONENT_COUNT_PER_ENTITY
+#define MAX_COMPONENT_COUNT_PER_ENTITY FASTECS_MAX_COMPONENT_COUNT_PER_ENTITY
+enum { MAX_COMPONENT_COUNT_PER_ENTITY = FASTECS_MAX_COMPONENT_COUNT_PER_ENTITY };
 #else
 enum { MAX_COMPONENT_COUNT_PER_ENTITY = 32 };
 #endif
@@ -104,38 +104,38 @@ enum { INVALID_COMPONENT_INDEX = -1 };
 enum { INVALID_EVENT_INDEX = -1 };
 
 /// The maximum component count user can define in the whole system
-#ifdef TINYECS_MAX_COMPONENT_COUNT
-enum { MAX_COMPONENT_COUNT = TINYECS_MAX_COMPONENT_COUNT };
+#ifdef FASTECS_MAX_COMPONENT_COUNT
+enum { MAX_COMPONENT_COUNT = FASTECS_MAX_COMPONENT_COUNT };
 #else
 enum { MAX_COMPONENT_COUNT = 128 };
 #endif
 
 /// The maximum event count user can define in the whole system
-#ifdef TINYECS_MAX_EVENT_COUNT
-enum { MAX_EVENT_COUNT = TINYECS_MAX_EVENT_COUNT + 2 };
+#ifdef FASTECS_MAX_EVENT_COUNT
+enum { MAX_EVENT_COUNT = FASTECS_MAX_EVENT_COUNT + 2 };
 #else 
 enum {MAX_EVENT_COUNT = 16 };
 #endif
 
 /// maximum chunk size
 /// actual chunk size = min(MAX_ENTITY_COUNT_PER_CHUNK * entitySize, maxChunkSize)
-#ifdef TINYECS_MAX_STORAGE_CHUNK_SIZE
-enum { MAX_STORAGE_CHUNK_SIZE = TINYECS_MAX_STORAGE_CHUNK_SIZE };
+#ifdef FASTECS_MAX_STORAGE_CHUNK_SIZE
+enum { MAX_STORAGE_CHUNK_SIZE = FASTECS_MAX_STORAGE_CHUNK_SIZE };
 #else
 enum { MAX_STORAGE_CHUNK_SIZE = 64 * 1024 * 1024 }; // 64k
 #endif
 
 /// maximum EntityContext count in one ECS world
-#ifdef TINYECS_MAX_CONTEXT_COUNT
-enum { MAX_CONTEXT_COUNT = TINYECS_MAX_CONTEXT_COUNT };
+#ifdef FASTECS_MAX_CONTEXT_COUNT
+enum { MAX_CONTEXT_COUNT = FASTECS_MAX_CONTEXT_COUNT };
 #else
 enum { MAX_CONTEXT_COUNT = 256 };
 #endif
 
 /// use this macro to control MAX_ENTITY_COUNT_PER_CHUNK
 /// MAX_ENTITY_COUNT_PER_CHUNK == (1 << MAX_BLOCK_COUNT_BITS)
-#ifdef TINYECS_MAX_BLOCK_COUNT_BITS
-enum { MAX_BLOCK_COUNT_BITS = TINYECS_MAX_BLOCK_COUNT_BITS };
+#ifdef FASTECS_MAX_BLOCK_COUNT_BITS
+enum { MAX_BLOCK_COUNT_BITS = FASTECS_MAX_BLOCK_COUNT_BITS };
 #else
 enum { MAX_BLOCK_COUNT_BITS = 10 };
 #endif
@@ -158,15 +158,15 @@ enum { STORAGE_INDEX_MASK = MAX_STORAGE_COUNT_PER_CONTEXT - 1};
 /// How to generate id for each component
 /// 0: generate id automatically, use DefineComponent to define component
 /// 1: generate id by specifying a value manually, use DefineComponentWithID to define component
-#ifdef TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID
-#define USE_CUSTOM_COMPONENT_TYPE_ID TINYECS_USE_CUSTOM_COMPONENT_TYPE_ID
+#ifdef FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID
+#define USE_CUSTOM_COMPONENT_TYPE_ID FASTECS_USE_CUSTOM_COMPONENT_TYPE_ID
 #else
 #define USE_CUSTOM_COMPONENT_TYPE_ID 0
 #endif
 
 /// the meaning is like above
-#ifdef TINYECS_USE_CUSTOM_EVENT_TYPE_ID
-#define USE_CUSTOM_EVENT_TYPE_ID TINYECS_USE_CUSTOM_EVENT_TYPE_ID
+#ifdef FASTECS_USE_CUSTOM_EVENT_TYPE_ID
+#define USE_CUSTOM_EVENT_TYPE_ID FASTECS_USE_CUSTOM_EVENT_TYPE_ID
 #else
 #define USE_CUSTOM_EVENT_TYPE_ID 0
 #endif
@@ -176,16 +176,16 @@ enum { STORAGE_INDEX_MASK = MAX_STORAGE_COUNT_PER_CONTEXT - 1};
 // 1: use hashmap as a container, with the same search speed as std::unordered_map
 // 2: use direct array, the search speed is log(1), but remember to give the component and unique id using DefineComponentWithID
 //	  instead of DefineComponent when you define your own component, and make sure this id doesn't excceed
-//    TINYECS_MAX_COMPONENT_COUNT whose default value is 128.
-#ifdef TINYECS_COMPONENT_INDEX_TABLE_TYPE
-#define COMPONENT_INDEX_TABLE_TYPE TINYECS_COMPONENT_INDEX_TABLE_TYPE
+//    FASTECS_MAX_COMPONENT_COUNT whose default value is 128.
+#ifdef FASTECS_COMPONENT_INDEX_TABLE_TYPE
+#define COMPONENT_INDEX_TABLE_TYPE FASTECS_COMPONENT_INDEX_TABLE_TYPE
 #else
 #define COMPONENT_INDEX_TABLE_TYPE 0
 #endif
 
 /// Event Index Table Type, the values are defines the same as above
-#ifdef TINYECS_EVENT_INDEX_TABLE_TYPE
-#define EVENT_INDEX_TABLE_TYPE TINYECS_EVENT_INDEX_TABLE_TYPE
+#ifdef FASTECS_EVENT_INDEX_TABLE_TYPE
+#define EVENT_INDEX_TABLE_TYPE FASTECS_EVENT_INDEX_TABLE_TYPE
 #else
 #define EVENT_INDEX_TABLE_TYPE 0
 #endif
@@ -193,8 +193,8 @@ enum { STORAGE_INDEX_MASK = MAX_STORAGE_COUNT_PER_CONTEXT - 1};
 /// How to split a paralell job before you execute it, it's used in Prepare method
 /// 0: divide job by chunks, without dividing blocks inside each chunk
 /// 1: divide job by blocks inside each chunk
-#ifdef TINYECS_DIVIDE_PARALLEL_JOB_METHOD
-#define DIVIDE_PARALLEL_JOB_METHOD TINYECS_DIVIDE_PARALLEL_JOB_METHOD
+#ifdef FASTECS_DIVIDE_PARALLEL_JOB_METHOD
+#define DIVIDE_PARALLEL_JOB_METHOD FASTECS_DIVIDE_PARALLEL_JOB_METHOD
 #else
 #define DIVIDE_PARALLEL_JOB_METHOD 1
 #endif
@@ -337,17 +337,17 @@ struct event_name_class : public constant_name_class<CustomId, _Char...>
 #endif
 };
 
-#define ComponentBaseClass(s, customId) TinyECS::component_name_class<customId, TINYECS_STR(#s)>
+#define ComponentBaseClass(s, customId) FastECS::component_name_class<customId, FASTECS_STR(#s)>
 #define DefineComponent(className) \
-	struct className : public TinyECS::component_name_class<INVALID_COMPONENT_TYPE_ID, TINYECS_STR(#className)>
+	struct className : public FastECS::component_name_class<INVALID_COMPONENT_TYPE_ID, FASTECS_STR(#className)>
 #define DefineComponentWithID(className, id) \
-	struct className : public TinyECS::component_name_class<id, TINYECS_STR(#className)>
+	struct className : public FastECS::component_name_class<id, FASTECS_STR(#className)>
 
-#define EventBaseClass(s, customId) TinyECS::event_name_class<customId, TINYECS_STR(#s)>
+#define EventBaseClass(s, customId) FastECS::event_name_class<customId, FASTECS_STR(#s)>
 #define DefineEvent(className) \
-	struct className : public TinyECS::event_name_class<INVALID_COMPONENT_TYPE_ID, TINYECS_STR(#className)>
+	struct className : public FastECS::event_name_class<INVALID_COMPONENT_TYPE_ID, FASTECS_STR(#className)>
 #define DefineEventWithID(className, id) \
-	struct className : public TinyECS::event_name_class<id, TINYECS_STR(#className)>
+	struct className : public FastECS::event_name_class<id, FASTECS_STR(#className)>
 
 /// helper class to check if these TYPEs have any duplication
 template<typename T, typename...OtherTypes>
@@ -445,14 +445,14 @@ inline void AdvancePointers(T0*& p0, T1*& p1, T2*& p2, T3*& p3, T4*& p4, T5*& p5
 	for (int __i = 0; __i < count; __i++) {				\
 		if (pEntity->mValid)							\
 			f(pEntity, __VA_ARGS__);					\
-		TinyECS::AdvancePointers(pEntity, __VA_ARGS__);	\
+		FastECS::AdvancePointers(pEntity, __VA_ARGS__);	\
 	}
 
 #define FOR_EACH_ENTITY1(pArg, f, count, pEntity, ...)	\
 	for (int __i = 0; __i < count; __i++) {				\
 		if (pEntity->mValid)							\
 			f(pArg, pEntity, __VA_ARGS__);				\
-		TinyECS::AdvancePointers(pEntity, __VA_ARGS__);	\
+		FastECS::AdvancePointers(pEntity, __VA_ARGS__);	\
 	}
 
 /// if you want to design your own memory-allocate algorithm,
@@ -594,8 +594,8 @@ class HashMapComponentIndexTable
 public:
 	int Add(ComponentTypeID id)
 	{
-		TINYECS_ASSERT(mIndexMap.size() == mComponentCount);
-		TINYECS_ASSERT(mIndexMap.find(id) == mIndexMap.end());
+		FASTECS_ASSERT(mIndexMap.size() == mComponentCount);
+		FASTECS_ASSERT(mIndexMap.find(id) == mIndexMap.end());
 		auto count = mComponentCount;
 		mIndexMap.insert({ id, mComponentCount });
 		mComponentCount += 1;
@@ -617,7 +617,7 @@ private:
 
 // DirectComponentIndexTable: use direct array, the search speed is log(1), but remember to give the component and unique id using DefineComponentWithID
 //	  instead of DefineComponent when you define your own component, and make sure this id doesn't excceed
-//    TINYECS_MAX_COMPONENT_COUNT whose default value is 128.
+//    FASTECS_MAX_COMPONENT_COUNT whose default value is 128.
 template<int MaxCount>
 class DirectComponentIndexTable
 {
@@ -630,7 +630,7 @@ public:
 	}
 	int Add(ComponentTypeID id)
 	{
-		TINYECS_ASSERT(mIndexTable[id] == INVALID_COMPONENT_INDEX);
+		FASTECS_ASSERT(mIndexTable[id] == INVALID_COMPONENT_INDEX);
 		mIndexTable[id] = mComponentCount;
 		auto count = mComponentCount;
 		mComponentCount += 1;
@@ -1243,13 +1243,13 @@ public:
 
 	Entity* Allocate(bool bCallConstruct)
 	{
-		TINYECS_ASSERT(mFreeHead != mFreeTail);
+		FASTECS_ASSERT(mFreeHead != mFreeTail);
 		uint16_t head = mFreeHead;
 		mFreeHead = mFreeList[head];
 		Entity* pEntity = &mEntitiesBuffer[head];
 		pEntity->mValid = true;
 		pEntity->mGenID = (pEntity->mGenID + 1) & 0x0000FFFF; // mGenID just has 16 bits
-		TINYECS_ASSERT(pEntity->mBlockIndex == head);
+		FASTECS_ASSERT(pEntity->mBlockIndex == head);
 		// construct components
 		if (bCallConstruct)
 			ConstructComponents(pEntity);
@@ -1271,7 +1271,7 @@ public:
 	// bCallDestructor: if need to call its components' destructors
 	void Deallocate(Entity* pEntity, bool bCallDestructor)
 	{
-		TINYECS_ASSERT(pEntity->mChunkIndex == mChunkId);
+		FASTECS_ASSERT(pEntity->mChunkIndex == mChunkId);
 		if (bCallDestructor)
 			DestructComponents(pEntity);
 		mFreeList[pEntity->mBlockIndex] = mFreeHead;
@@ -1323,7 +1323,7 @@ public:
 			return nullptr;
 		size_t size = mArchetype->mComponentSizes[index];
 		auto pComponent = reinterpret_cast<ComponentType*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
-		TINYECS_ASSERT(check_aligned_address(pComponent));
+		FASTECS_ASSERT(check_aligned_address(pComponent));
 		return pComponent;
 	}
 
@@ -1335,27 +1335,27 @@ public:
 			return nullptr;
 		size_t size = mArchetype->mComponentSizes[index];
 		auto pComponent = reinterpret_cast<const ComponentType*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
-		TINYECS_ASSERT(check_aligned_address(pComponent));
+		FASTECS_ASSERT(check_aligned_address(pComponent));
 		return pComponent;
 	}
 
 	template<typename T = byte>
 	T* GetComponentByIndex(Entity* pEntity, int index)
 	{
-		TINYECS_ASSERT(index < mComponentCount);
+		FASTECS_ASSERT(index < mComponentCount);
 		size_t size = mArchetype->mComponentSizes[index];
 		T* pComponent = reinterpret_cast<T*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
-		TINYECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
+		FASTECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
 		return pComponent;
 	}
 
 	template<typename T = byte>
 	const T* GetComponentByIndex(const Entity* pEntity, int index) const
 	{
-		TINYECS_ASSERT(index < mComponentCount);
+		FASTECS_ASSERT(index < mComponentCount);
 		size_t size = mArchetype->mComponentSizes[index];
 		const T* pComponent = reinterpret_cast<const T*>(mComponentBuffers[index] + (size * pEntity->mBlockIndex));
-		TINYECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
+		FASTECS_ASSERT(check_aligned_address(pComponent, mArchetype->mComponentAlignments[index]));
 		return pComponent;
 	}
 
@@ -1927,7 +1927,7 @@ public:
 
 	Entity* CloneEntity(const Entity* pEntity)
 	{
-		TINYECS_ASSERT(mArchetype == pEntity->GetArchetype());
+		FASTECS_ASSERT(mArchetype == pEntity->GetArchetype());
 		Entity* pClonedEntity = Allocate(false);
 		for (int i = 0; i < mComponentCountPerEntity; i++)
 		{
@@ -2358,7 +2358,7 @@ public:
 	
 	EntityComponentStorage* GetEntityComponentStorage(uint16_t index)
 	{
-		TINYECS_ASSERT(index < mEntityComponentStorageList.size());
+		FASTECS_ASSERT(index < mEntityComponentStorageList.size());
 		return mEntityComponentStorageList[index];
 	}
 
@@ -2388,7 +2388,7 @@ public:
 		EntityComponentStorage* pStorage = pArchetype->mStoragesInContext[mContextId];
 		if (!pStorage) {
 			uint16_t index = (uint16_t)mEntityComponentStorageList.size();
-			TINYECS_ASSERT(index < MAX_STORAGE_COUNT_PER_CONTEXT);
+			FASTECS_ASSERT(index < MAX_STORAGE_COUNT_PER_CONTEXT);
 			pStorage = new EntityComponentStorage(this, index, pArchetype);
 			mEntityComponentStorageList.push_back(pStorage);
 			pArchetype->mStoragesInContext[mContextId] = pStorage;
@@ -2586,8 +2586,8 @@ class ParallelJobBase
 public:
 	void Prepare(EntityContext* pContext, int threadCount)
 	{
-		TINYECS_ASSERT(threadCount <= MAX_THREAD_COUNT);
-		TINYECS_ASSERT(mState != ParallelJobState::Executing);
+		FASTECS_ASSERT(threadCount <= MAX_THREAD_COUNT);
+		FASTECS_ASSERT(mState != ParallelJobState::Executing);
 		mContext = pContext;
 		mThreadCount = threadCount;
 		mStartCounter.store(0);
@@ -2874,7 +2874,7 @@ private:
 
 void Entity::Release()
 {
-	TINYECS_ASSERT(mValid);
+	FASTECS_ASSERT(mValid);
 	this->mStorage->mContext->OnEntityDeleted(this);
 	mStorage->Deallocate(this, true);
 }
@@ -2895,7 +2895,7 @@ public:
 	EntityContext* CreateContext()
 	{
 		auto id = FindAvaibableContextId();
-		TINYECS_ASSERT(id != -1);
+		FASTECS_ASSERT(id != -1);
 		auto pContext = new EntityContext(id, this, mArchetypeManager);
 		mEntityContexts[id] = pContext;
 		return pContext;
@@ -2955,7 +2955,7 @@ public:
 
 	~World()
 	{
-		TINYECS_SAFE_DELETE(mArchetypeManager);
+		FASTECS_SAFE_DELETE(mArchetypeManager);
 	}
 
 	template<typename...ComponentTypes>
@@ -3031,7 +3031,7 @@ void EntityContext::Release()
 	for (auto pEntityComponentStorage : mEntityComponentStorageList) {
 		auto pArchetype = pEntityComponentStorage->GetArchetype();
 		pArchetype->mStoragesInContext[mContextId] = nullptr;
-		TINYECS_SAFE_DELETE(pEntityComponentStorage);
+		FASTECS_SAFE_DELETE(pEntityComponentStorage);
 	}
 	mEntityComponentStorageList.clear();
 	mWorld->RemoveContext(this);
@@ -3224,7 +3224,7 @@ template<typename ThreadLocalArg, typename...ComponentTypes>
 void ParallelJob<true, ThreadLocalArg, ComponentTypes...>::Execute(ThreadLocalArg* pThreadLocalArg)
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	TINYECS_ASSERT(threadIndex < base::mThreadCount);
+	FASTECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3241,7 +3241,7 @@ template<typename...ComponentTypes>
 void ParallelJob<false, ComponentTypes...>::Execute()
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	TINYECS_ASSERT(threadIndex < base::mThreadCount);
+	FASTECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3258,7 +3258,7 @@ template<typename ThreadLocalArg, typename...ComponentTypes>
 void ParallelBatchJob<true, ThreadLocalArg, ComponentTypes...>::Execute(ThreadLocalArg* pThreadLocalArg)
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	TINYECS_ASSERT(threadIndex < base::mThreadCount);
+	FASTECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];
@@ -3275,7 +3275,7 @@ template<typename...ComponentTypes>
 void ParallelBatchJob<false, ComponentTypes...>::Execute()
 {
 	int threadIndex = base::mStartCounter.fetch_add(1);
-	TINYECS_ASSERT(threadIndex < base::mThreadCount);
+	FASTECS_ASSERT(threadIndex < base::mThreadCount);
 	base::mState = ParallelJobState::Executing;
 
 	ParallelJobChunkSegementList& chunkList = base::mDividedJobChunkSegmentArray[threadIndex];

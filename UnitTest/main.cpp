@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------------------------
-TinyECS (Tiny Entity-Component-System Library)
+FastECS (Fast Entity-Component-System Library)
 ---------------------------------------------------------------------------
 
 Original code by edisongao
@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Common.hpp"
 #include <atomic>
 #include <thread>
-using namespace TinyECS;
+using namespace FastECS;
 
 float rand_float();
 float rand_float(float a, float b);
