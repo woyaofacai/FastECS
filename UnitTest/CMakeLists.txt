@@ -1,8 +1,9 @@
 set(PROJECT_NAME UnitTest)
 
 
+
 add_executable(${PROJECT_NAME} 
-	"../TinyECS.hpp" 
+	"../FastECS.hpp" 
 	"catch.hpp"
 	"MathLib.hpp"
 	"Common.hpp"
@@ -10,3 +11,4 @@ add_executable(${PROJECT_NAME}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-s")
+
