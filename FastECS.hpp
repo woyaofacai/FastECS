@@ -1558,7 +1558,7 @@ public:
 	template<typename...ComponentTypes, typename F, typename RuntimeArg>
 	void _DoForEach_WithTooManyComponents(F&& f, RuntimeArg* pArg, int count, Entity* pEntity, byte* componentsBytes[])
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		using ComponentTuple = std::tuple<RuntimeArg*, Entity*, std::decay_t<ComponentTypes> *...>;
 		ComponentTuple componentTuple;
 		std::get<0>(componentTuple) = pArg;
@@ -1578,7 +1578,7 @@ public:
 	template<typename...ComponentTypes, typename F>
 	void _DoForEach_WithTooManyComponents(F&& f, int count, Entity* pEntity, byte* componentsBytes[])
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		using ComponentTuple = std::tuple<Entity*, std::decay_t<ComponentTypes> *...>;
 		ComponentTuple componentTuple;
 		std::get<0>(componentTuple) = pEntity;
@@ -1598,7 +1598,7 @@ public:
 	void ForEach(F&& f, RuntimeArg* pArg, int startBlockIndex, int endBlockIndex)
 	{
 		//using ComponentTuple = std::tuple<RuntimeArg*, Entity*, std::decay_t<ComponentTypes>*...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 		Entity* pEntity = &mEntitiesBuffer[startBlockIndex];
@@ -1626,7 +1626,7 @@ public:
 	void ForEach(F&& f, int startBlockIndex, int endBlockIndex)
 	{
 		//using ComponentTuple = std::tuple<Entity*, std::decay_t<ComponentTypes>*...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 		Entity* pEntity = &mEntitiesBuffer[startBlockIndex];
@@ -1654,7 +1654,7 @@ public:
 	void ForEach(F&& f, int* componentIndexes)
 	{
 		//using ComponentTuple = std::tuple<Entity*, std::decay_t<ComponentTypes>*...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		Entity* pEntity = &mEntitiesBuffer[0];
 
 		byte* componentsBytes[n] = { 0 };
@@ -1679,7 +1679,7 @@ public:
 	void ForEach(F&& f, RuntimeArg* pArg, int* componentIndexes)
 	{
 		//using ComponentTuple = std::tuple<Entity*, std::decay_t<ComponentTypes>*...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		Entity* pEntity = &mEntitiesBuffer[0];
 
 		byte* componentsBytes[n] = { 0 };
@@ -1704,7 +1704,7 @@ public:
 	void ForEachBatch(F&& f, int* componentIndexes)
 	{
 		using ComponentTuple = std::tuple<Entity*, int, std::decay_t<ComponentTypes> *...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		Entity* pEntity = &mEntitiesBuffer[0];
 
 		byte* componentsBytes[n] = { 0 };
@@ -1726,7 +1726,7 @@ public:
 	void ForEachBatch(F&& f, RuntimeArg* pArg, int* componentIndexes)
 	{
 		using ComponentTuple = std::tuple<RuntimeArg*, Entity*, int, std::decay_t<ComponentTypes> *...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		Entity* pEntity = &mEntitiesBuffer[0];
 
 		byte* componentsBytes[n] = { 0 };
@@ -1749,7 +1749,7 @@ public:
 	void ForEachBatch(F&& f, int startBlockIndex, int endBlockIndex)
 	{
 		using ComponentTuple = std::tuple<Entity*, int, std::decay_t<ComponentTypes>*...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 		Entity* pEntity = &mEntitiesBuffer[startBlockIndex];
@@ -1774,7 +1774,7 @@ public:
 	void ForEachBatch(F&& f, RuntimeArg* pArg, int startBlockIndex, int endBlockIndex)
 	{
 		using ComponentTuple = std::tuple<RuntimeArg*, Entity*, int, std::decay_t<ComponentTypes> *...>;
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 		Entity* pEntity = &mEntitiesBuffer[startBlockIndex];
@@ -1996,7 +1996,7 @@ public:
 	template<typename F, typename...ComponentTypes>
 	void ForEach(F&& f)
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 
@@ -2010,7 +2010,7 @@ public:
 	template<typename F, typename RuntimeArg, typename...ComponentTypes>
 	void ForEach(F&& f, RuntimeArg* pArg)
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 
@@ -2024,7 +2024,7 @@ public:
 	template<typename F, typename...ComponentTypes>
 	void ForEachBatch(F&& f)
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 
@@ -2038,7 +2038,7 @@ public:
 	template<typename F, typename RuntimeArg, typename...ComponentTypes>
 	void ForEachBatch(F&& f, RuntimeArg* pArg)
 	{
-		const int n = sizeof...(ComponentTypes);
+		constexpr int n = sizeof...(ComponentTypes);
 		int componentIndexes[n];
 		GetComponentIndexesHelperClass<ComponentTypes...>::Call(mArchetype, componentIndexes, 0);
 
